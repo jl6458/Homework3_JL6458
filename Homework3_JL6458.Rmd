@@ -4,27 +4,609 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
+read.csv < read_csv
+read.csv vs read_csv (used read_ccv...)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## GitHub Documents
+## Exportint data
+Export the mlb sub-table
 
-This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
 
-## Including Code
-
-You can include R code in the document as follows:
-
-```{r cars}
-summary(cars)
+```{r}
+write_csv(mlb_df, "./data/mlb_subtable.csv")
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+## Data Manipulation with dplyr
+dplyr
+the dplyr package has specific functions that map to each of the
+- select relevant variable
+- filter out unnecessary observation
+- mutate (sorry) new variable, or change exisiting ones
+- arrange in an easy-to-digest format
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Pipes
+Sequence of actions to start my days
+- wake up
+- brush teeth
+- do data science
+In "R", I can nest these actions:
+happy_jeff = do_da (brush_teeth(wake_up(asleep_jeff)))
+or
+awake_jeff = wake_up (asleep_jeff)
+clean_teeth_jeff = brush_teeth (awake_jeff)
+happy_jeff = do_ds (clean_teeth_jeff)
+
+Pipe Operation:
+Using pipes is easier to read and understand, and avoids clutter
+happy_jeff = 
+  wake_up (asleep_jeff) %>%
+  brush_teeth() %>%
+  do_ds()
+read "%>%" as "and then"
+
+
+## Data Wrangling I_3rd Module: Tidy data
+
+## Visualization: Part I
+
+Exploratory data analysis
+
+
+___________________________________________________________________________________
+Homework 3: Visualization and EDA
+Problem 0
+structure of submission
+"public GitHub repo + local R Project: p8105_hw3_JL6458"
+"single.Rmd file, p8105_hw3_JL6458.Rmd, github_document"
+subdirectory to store data files, relative paths to access these data files.
+
+Problem 1:
+instacart
+do not include this dataset in your local data directory; instaead, load the data from the p.8105.datasets
+
+```{r}
+library(p8105.datasets)
+data("instacart")
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+a. description
+- size
+- strucutre
+- key variable description
+- illstrative exmaple of observation
+
+b. How many aisles are there, and which aisles are the most items ordered from?
+c. Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered.
+Arrange aisles sensibly, and organize your plot so others can read it. 
+d. Make a table showing the three most popular items in each of the aisles "baking ingredients", "dog food care", and "packaged vegetable fruits". 
+Include the number of times each item is ordered in your table. 
+e. Make a table showing the hours of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers. (i.e. produce a 2x7 table.)
+
+
+___________________________________________________________________________________
+
+---
+title: "P8105 Homework 3"
+author: "Your Name and UNI"
+date: "2025-10-12"
+output: github_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+```
+
+This analysis explores the Instacart dataset to understand product popularity and ordering patterns.
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+library(knitr)
+```
+
+## Problem 1
+
+### Data Loading and Description
+
+First, we load the `instacart` dataset from the `p8105.datasets` package.
+
+```{r load-data}
+data("instacart")
+```
+
+The `instacart` dataset is a large dataframe with `r nrow(instacart)` observations and `r ncol(instacart)` variables. Each row represents a single product included in an order. 
+
+Key variables include:
+* `product_name`: The name of the product (e.g., "Organic Strawberries").
+* `aisle`: The store aisle where the product is found (e.g., "fresh fruits").
+* `department`: A higher-level category for the aisle (e.g., "produce").
+* `order_dow`: The day of the week the order was placed (0=Sunday, 1=Monday, ..., 6=Saturday).
+* `order_hour_of_day`: The hour of the day (0-23) when the order was placed.
+
+For example, a single observation might show that "Granny Smith Apples" were ordered from the "fresh fruits" aisle on a Wednesday (order_dow = 3) at 2 PM (order_hour_of_day = 14).
+
+### Aisle Analysis
+
+Next, we investigate the aisles. We start by counting the number of unique aisles in the dataset.
+
+```{r count-aisles}
+n_aisles <- instacart |> 
+  pull(aisle) |> 
+  n_distinct()
+```
+
+There are **`r n_aisles`** unique aisles in the dataset. The most popular aisles by number of items ordered are **fresh fruits** and **fresh vegetables**, which is expected as they are common grocery staples.
+
+The following plot visualizes the number of items ordered from each aisle, limited to aisles with more than 10,000 items. Aisles are arranged from most to least popular for readability.
+
+```{r plot-aisles}
+instacart |>
+  count(aisle) |>
+  filter(n > 10000) |>
+  mutate(aisle = fct_reorder(aisle, n)) |>
+  ggplot(aes(x = aisle, y = n)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Number of Items Ordered in Popular Aisles",
+    x = "Aisle",
+    y = "Number of Items Ordered"
+  ) +
+  coord_flip() +
+  theme_minimal()
+```
+The plot clearly shows that "fresh fruits" and "fresh vegetables" are the two dominant aisles, followed by "packaged vegetables fruits".
+
+### Popular Items in Specific Aisles
+
+To understand customer preferences within aisles, we can find the most frequently ordered products. The table below shows the top three most popular items in the “baking ingredients”, “dog food care”, and “packaged vegetables fruits” aisles.
+
+```{r popular-items-table}
+instacart |>
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
+  count(aisle, product_name) |>
+  group_by(aisle) |>
+  slice_max(order_by = n, n = 3) |>
+  # Ungroup is good practice after slice_max, although not strictly necessary here
+  ungroup() |> 
+  # Arrange for a clean presentation
+  arrange(aisle, desc(n)) |>
+  kable(
+    col.names = c("Aisle", "Product", "Times Ordered"),
+    caption = "Top 3 Most Ordered Items in Select Aisles"
+  )
+```
+The table reveals specific popular products, such as "Organic Bananas" and "Organic Strawberries" in the packaged produce section.
+
+### Item Order Timing
+
+Finally, let's examine if purchasing habits for certain items vary by the day of the week. The table below displays the mean hour of the day (on a 24-hour clock) at which "Pink Lady Apples" and "Coffee Ice Cream" are ordered.
+
+```{r order-timing-table}
+instacart |>
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
+  group_by(product_name, order_dow) |>
+  summarize(mean_hour = mean(order_hour_of_day), .groups = "drop") |>
+  mutate(
+    order_dow = recode(
+      as.character(order_dow),
+      "0" = "Sun", "1" = "Mon", "2" = "Tue",
+      "3" = "Wed", "4" = "Thu", "5" = "Fri", "6" = "Sat"
+    )
+  ) |>
+  pivot_wider(
+    names_from = order_dow,
+    values_from = mean_hour
+  ) |>
+  # Ensure day columns are in order
+  select(product_name, Sun, Mon, Tue, Wed, Thu, Fri, Sat) |>
+  kable(
+    digits = 2,
+    caption = "Mean Hour of Day for Item Orders by Day of Week",
+    col.names = c("Product", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+  )
+```
+The data shows that both items are generally purchased in the early-to-mid afternoon, typically between 1 PM (13:00) and 3:30 PM (15:30), with little variation across the week.
+
+```
+
+
+________________________________________________________________________________________
+
+## Problem 2
+
+### Data Loading and Tidying
+
+We will use two Zillow datasets: one containing monthly rental price data by ZIP code, and a crosswalk file mapping ZIP codes to NYC boroughs. We assume these are stored in a local `data` directory.
+
+```{r load-zillow-data, message=FALSE}
+# Using read.csv for base R compatibility, but read_csv from readr is also great
+zip_boro_xwalk = read.csv("data/zip_boro_xwalk.csv")
+zillow_rent = read.csv("data/zillow_long_with_HPI.csv")
+
+# Clean and merge the datasets
+zillow_df = 
+  left_join(zillow_rent, zip_boro_xwalk, by = c("RegionName" = "zip")) |>
+  # Rename columns for clarity
+  rename(zip_code = RegionName, rent_price = value, boro = boro.y) |>
+  # Parse year and month from the 'month' column
+  separate(month, into = c("year", "month"), sep = "-") |>
+  # Convert types
+  mutate(
+    year = as.numeric(year),
+    month = as.numeric(month),
+    boro = as.factor(boro)
+  ) |>
+  # Remove unnecessary columns and rows with missing borough info
+  select(zip_code, boro, year, month, rent_price) |>
+  filter(!is.na(boro))
+```
+
+### ZIP Code Observation Analysis
+
+We want to see how consistently each ZIP code is observed between January 2015 and August 2024 (a total of 116 months).
+
+```{r zip-observation-counts}
+zip_counts = 
+  zillow_df |>
+  filter(year >= 2015 & (year < 2024 | (year == 2024 & month <= 8))) |>
+  count(zip_code)
+
+n_zips_116 = 
+  zip_counts |>
+  filter(n == 116) |>
+  nrow()
+
+n_zips_less_than_10 =
+  zip_counts |>
+  filter(n < 10) |>
+  nrow()
+```
+
+There are **`r n_zips_116`** ZIP codes that are observed in all 116 months. There are **`r n_zips_less_than_10`** ZIP codes observed fewer than 10 times.
+
+The variation in observation frequency can be due to several reasons. Some ZIP codes might be newly established or have their boundaries changed over time. Others, especially in less populated areas or areas with low rental unit turnover, may not have enough rental data in certain months for Zillow to calculate a reliable average price. ZIP codes with consistent observations are likely in dense, stable residential areas with an active rental market.
+
+### Average Rental Price by Borough and Year
+
+The following table shows the trend of average rental prices across NYC boroughs by year.
+
+```{r boro-year-rent-table}
+zillow_df |>
+  group_by(boro, year) |>
+  summarize(avg_rent = mean(rent_price, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(
+    names_from = year,
+    values_from = avg_rent
+  ) |>
+  kable(
+    digits = 0,
+    caption = "Average Rental Price by Borough and Year"
+  )
+```
+
+**Comment on Trends:** The table clearly shows a general upward trend in rental prices across all boroughs over the years. Manhattan consistently has the highest average rent, often double that of the Bronx. Prices appear to dip or stagnate slightly around 2020-2021, which could be attributed to the effects of the COVID-19 pandemic, followed by a sharp recovery and increase.
+
+### NYC Rental Price Time Series
+
+The plot below shows the trajectory of average rental prices over time, faceted by borough to facilitate comparison.
+
+```{r rent-timeseries-plot}
+rent_timeseries_plot = 
+  zillow_df |>
+  group_by(boro, year, month) |>
+  summarize(avg_rent = mean(rent_price, na.rm = TRUE), .groups = "drop") |>
+  mutate(date = as.Date(paste(year, month, "01", sep = "-"))) |>
+  ggplot(aes(x = date, y = avg_rent, color = boro)) +
+  geom_line() +
+  facet_wrap(~boro, scales = "free_y") +
+  labs(
+    title = "Average Monthly Rental Prices in NYC by Borough",
+    x = "Date",
+    y = "Average Rent ($)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+rent_timeseries_plot
+```
+**Comment on Plot:** This plot reinforces the trends seen in the table. The sharp increase in rent post-2021 is particularly evident in Manhattan, Brooklyn, and Queens. The seasonal fluctuations, with prices often peaking in summer months, are also visible. The "free_y" scale highlights that while all boroughs experience similar trends, the absolute prices are vastly different, with Manhattan's rental market operating on a much higher scale than the others.
+
+### Distribution of ZIP-Code Rents in 2023
+
+To compare the variation of rental prices *within* boroughs, we can look at the distribution of average ZIP-code-level rents for 2023.
+
+```{r rent-distribution-plot}
+rent_distribution_plot =
+  zillow_df |>
+  filter(year == 2023) |>
+  group_by(boro, zip_code) |>
+  summarize(avg_rent_2023 = mean(rent_price, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = boro, y = avg_rent_2023, fill = boro)) +
+  geom_violin(alpha = 0.8) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Distribution of Average ZIP Code Rents by Borough (2023)",
+    x = "Borough",
+    y = "Average Rent ($)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+rent_distribution_plot
+```
+
+**Comment on Plot:** This plot reveals the diversity of the rental market within each borough. Manhattan not only has the highest median rent but also the widest price distribution, with some ZIP codes having extremely high average rents. Brooklyn and Queens show a similar, but lower-priced, distribution. The Bronx and Staten Island have the lowest and most concentrated rental prices. The violin plot shows that for Manhattan, Brooklyn, and Queens, the distribution is right-skewed, indicating a large number of very expensive ZIP codes.
+
+### Combined and Exported Plot
+
+Finally, we combine the two plots into a single graphic for a comprehensive view and save it to the `results` folder.
+
+```{r combine-and-save-plot}
+# Create the directory if it doesn't exist
+if (!dir.exists("results")) {
+  dir.create("results")
+}
+
+combined_plot = rent_timeseries_plot / rent_distribution_plot
+
+# Save the combined plot
+ggsave("results/nyc_rent_analysis.png", combined_plot, width = 10, height = 8)
+```
+The combined plot has been exported to the `results/` directory as `nyc_rent_analysis.png`.
+
+---
+
+## Problem 3
+
+### Data Loading and Tidying
+
+This problem uses accelerometer data. We will load and combine two datasets: one with minute-by-minute activity counts, and another with day-level covariates for each participant.
+
+```{r load-accel-data, message=FALSE}
+accel_df = 
+  read_csv("data/accel_all.csv") |>
+  clean_names()
+
+day_covar_df =
+  read_csv("data/day_level_covariates.csv") |>
+  clean_names()
+
+# Combine and tidy the datasets
+activity_df = 
+  left_join(accel_df, day_covar_df, by = c("day_id", "day")) |>
+  mutate(
+    # Set day of the week as an ordered factor
+    day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
+    # Create a categorical variable for weekday vs. weekend
+    day_type = ifelse(day %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+  )
+```
+
+The resulting tidy dataset contains `r nrow(activity_df)` observations of minute-level activity data across `r n_distinct(activity_df$day_id)` participant-days. Each observation includes the activity count for that minute, the day of the week, and whether it was a weekday or weekend.
+
+### Total Activity by Day of the Week
+
+The table below shows the total activity (sum of activity counts) for each day of the week, ordered from Sunday to Saturday.
+
+```{r total-activity-table}
+activity_df |>
+  group_by(day) |>
+  summarize(total_activity = sum(activity, na.rm = TRUE)) |>
+  kable(
+    digits = 0,
+    col.names = c("Day of Week", "Total Activity"),
+    caption = "Total Activity by Day of the Week"
+  )
+```
+
+**Comment on Trends:** The table shows that activity levels are highest on Friday and Saturday, and lowest on Sunday and Monday. This suggests that participants are generally more active towards the end of the week and on the weekend.
+
+### 24-Hour Activity Profiles
+
+To explore daily patterns, we can plot the average activity level for each minute of the day.
+
+```{r daily-activity-plot}
+daily_activity_plot = 
+  activity_df |>
+  group_by(activity_minute) |>
+  summarize(avg_activity = mean(activity, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = activity_minute, y = avg_activity)) +
+  geom_line() +
+  labs(
+    title = "Average Activity Throughout the Day",
+    x = "Minute of the Day",
+    y = "Average Activity Count"
+  ) +
+  theme_minimal()
+
+daily_activity_plot
+```
+
+**Comment on Plot:** The plot shows a clear diurnal pattern. Activity is lowest during the night (approximately minutes 0-300, or 12 AM to 5 AM). It rises sharply in the morning, showing three distinct peaks: one around 8 AM, a larger one around midday, and the highest peak in the evening around 6-7 PM. This pattern likely reflects a typical day of waking, commuting/working, a midday break, and evening activities.
+
+### Weekday vs. Weekend Activity
+
+Next, we compare the 24-hour activity profiles for weekdays and weekends.
+
+```{r weekday-weekend-plot}
+weekday_weekend_plot =
+  activity_df |>
+  group_by(day_type, activity_minute) |>
+  summarize(avg_activity = mean(activity, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = activity_minute, y = avg_activity, color = day_type)) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Average Activity on Weekdays vs. Weekends",
+    x = "Minute of the Day",
+    y = "Average Activity Count",
+    color = "Day Type"
+  ) +
+  theme_minimal()
+
+weekday_weekend_plot
+```
+
+**Comment on Plot:** This plot reveals interesting differences. The morning activity peak on weekdays is earlier and sharper than on weekends, likely corresponding to a typical work commute. In contrast, weekend activity starts rising later in the morning. The evening peak is more pronounced on weekdays. Weekend activity, while starting later, appears more sustained throughout the afternoon compared to weekdays.
+
+### Combined and Exported Plot
+
+Finally, we combine the two activity plots and export the result.
+
+```{r combine-activity-plots}
+combined_activity_plot = daily_activity_plot / weekday_weekend_plot
+
+# Save the combined plot
+ggsave("results/activity_analysis.png", combined_activity_plot, width = 10, height = 8)
+```
+The combined plot has been exported to the `results/` directory as `activity_analysis.png`.
+
+________________________________________________________________________________________
+## Problem 3
+
+### Data Loading and Tidying
+
+This problem uses NHANES accelerometer data. We will load and combine participant covariate data with their minute-by-minute accelerometer readings.
+
+```{r load-nhanes-data, message=FALSE}
+# Load covariate and accelerometer data
+nhanes_covar = read_csv("data/nhanes_covar.csv", skip = 4) |>
+  clean_names()
+
+nhanes_accel = read_csv("data/nhanes_accel.csv") |>
+  clean_names()
+
+# Tidy, filter, and merge
+nhanes_df = 
+  # Start with covariates
+  nhanes_covar |>
+  # Filter for adults >= 21 and drop rows with any missing data
+  filter(age >= 21) |>
+  drop_na() |>
+  # Join with accelerometer data
+  left_join(nhanes_accel, by = "seqn") |>
+  # Pivot to long format for MIMS data
+  pivot_longer(
+    cols = starts_with("mims"),
+    names_to = "minute",
+    names_prefix = "mims",
+    values_to = "mims_value"
+  ) |>
+  mutate(
+    minute = as.numeric(minute),
+    # Create ordered factors for education and gender
+    education = factor(education, 
+                       levels = c("Less than high school", "High school", "Some college", "College grad")),
+    gender = factor(gender)
+  )
+```
+The final tidy dataset contains minute-level activity data for `r n_distinct(nhanes_df$seqn)` participants who are 21 years or older and have complete demographic information.
+
+### Demographics of Study Participants
+
+The following table summarizes the number of men and women in each education category.
+
+```{r demographics-table}
+nhanes_df |>
+  # Get one row per participant for counting
+  distinct(seqn, gender, education) |>
+  count(education, gender) |>
+  pivot_wider(
+    names_from = gender,
+    values_from = n
+  ) |>
+  kable(caption = "Number of Participants by Education and Gender")
+```
+
+The visualization below shows the age distribution for men and women within each education category.
+
+```{r demographics-plot}
+nhanes_df |>
+  distinct(seqn, gender, education, age) |>
+  ggplot(aes(x = age, fill = gender)) +
+  geom_density(alpha = 0.6) +
+  facet_wrap(~education) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    title = "Age Distribution by Gender and Education Level",
+    x = "Age (years)",
+    y = "Density",
+    fill = "Gender"
+  ) +
+  theme_bw()
+```
+
+**Comment:** The table shows a fairly balanced distribution of men and women across education levels, though there are slightly more men in the "College grad" category. The density plots show that for all education levels, the age distribution is skewed towards younger participants. The "Less than high school" group appears to include older participants on average compared to the other groups.
+
+### Total Activity Analysis
+
+To analyze overall activity, we aggregate the minute-level data to a total daily activity for each participant. The plot below visualizes total activity against age, stratified by gender and education.
+
+```{r total-activity-plot}
+nhanes_df |>
+  # Calculate total activity per person
+  group_by(seqn, age, gender, education) |>
+  summarize(total_activity = sum(mims_value, na.rm = TRUE), .groups = "drop") |>
+  # Plot against age
+  ggplot(aes(x = age, y = total_activity, color = gender)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(se = FALSE) +
+  facet_wrap(~education) +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Total Daily Activity vs. Age",
+    subtitle = "Stratified by Education Level and Gender",
+    x = "Age (years)",
+    y = "Total Activity (MIMS count)"
+  ) +
+  theme_bw()
+```
+
+**Comment on Plot:** There is a clear and consistent trend of decreasing physical activity with increasing age across all education levels and for both genders. In most groups, men appear to have slightly higher total activity levels than women, although the trend lines are quite close. The rate of decline seems roughly similar across the different education categories.
+
+### 24-Hour Activity Time Course
+
+Accelerometer data allows us to examine how activity patterns vary throughout the day. The plot below shows the average MIMS value for each minute of the day, comparing men and women across the three specified education levels.
+
+```{r activity-timecourse-plot}
+nhanes_df |>
+  # We need to filter for the three specified education levels
+  filter(education %in% c("Less than high school", "High school", "Some college")) |>
+  group_by(education, gender, minute) |>
+  summarize(mean_mims = mean(mims_value, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = minute, y = mean_mims, color = gender)) +
+  geom_line(alpha = 0.4) + # Use a lighter line to see the smooth better
+  geom_smooth(se = FALSE) +
+  facet_wrap(~education, nrow = 3) +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "24-Hour Activity Profiles by Education and Gender",
+    x = "Minute of the Day (starting at midnight)",
+    y = "Average MIMS Value"
+  ) +
+  theme_bw()
+```
+
+**Comment on Plot:** The plots reveal a distinct daily activity pattern common to all groups: low activity during the night, a sharp increase in the morning, and sustained activity throughout the day before declining in the late evening. Men consistently show higher average activity levels than women throughout the day across all education levels. The morning ramp-up in activity appears to start slightly earlier for those with a "High school" education compared to the other two groups. The overall shape of the daily profile is remarkably similar across all categories, with the primary difference being the magnitude of activity (higher for men).
+
+
+
+
+
+
+
+
+
+
+
+
