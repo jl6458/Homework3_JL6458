@@ -201,6 +201,77 @@ weather_df %>%
   stat_summary(fun = "median")
 ```
 
+Ridge plot -- the most popular plot of 2017
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = name)) +
+  geom_density_ridges()
+```
+
+## Save ad Embed
+
+Let's save a scatterplot.
+
+```{r}
+weather_plot = 
+  weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alphar = .5)
+
+ggsave("weather_plot.pdf", weather_plot, width = 8, height = 5)
+ggsave("./results/weather_plot.pdf", weather_plot, width = 8, height = 5)
+
+```
+
+What about embedding...
+```{r, fig.width=6, fig.height=6}
+weather_plot
+
+```
+
+Embed at different size
+```{r, fig.width=12, fig.height=6}
+weather_plot
+```
+
+### Learning Assessment I
+
+```{r}
+weather_df %>%
+  filter(name == "CentralPark_NY") %>%
+  mutate(
+    tmax_fahr = tmax * (9 / 5) + 32,
+    tmin_fahr = tmin * (9 / 5) + 32) %>%
+  ggplot(aes(x = tmin_fahr, y = tmax_fahr)) +
+  geom_point(alpha = .5) +
+  geom_smooth(method = "1m", se = FALSE)
+```
+
+### Learning Assessment II
+Learning Assessment: Make plots that compare precipitation across locations. Try a histogram, a density plot, a boxplot, a violin plot, and a ridgeplot; use aesthetic mappings to make your figure readable.
+
+ Solution
+I’ll show a few possibilities, although this is by no means exhaustive!
+
+First a density plot:
+
+ggplot(weather_df, aes(x = prcp)) + 
+  geom_density(aes(fill = name), alpha = .5) 
+Next a ridge plot:
+
+ggplot(weather_df, aes(x = prcp, y = name)) + 
+  geom_density_ridges(scale = .85)
+Last a boxplot:
+
+ggplot(weather_df, aes(y = prcp, x = name)) + 
+  geom_boxplot() 
+This is a tough variable to plot because of the highly skewed distribution in each location. Of these, I’d probably choose the boxplot because it shows the outliers most clearly. If the “bulk” of the data were interesting, I’d probably compliment this with a plot showing data for all precipitation less than 100, or for a data omitting days with no precipitation.
+
+weather_df |> 
+  filter(prcp > 0) |> 
+  ggplot(aes(x = prcp, y = name)) + 
+  geom_density_ridges(scale = .85)
+
 
 
 
